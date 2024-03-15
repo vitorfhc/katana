@@ -2,27 +2,6 @@ use std::cmp::Ordering;
 
 use glam::f32::Vec3;
 
-/// Maximum absolute difference allowed for the coordinates of two points to be considered equal.
-///
-/// # Example
-///
-/// ```
-/// use slicer::EPSILON;
-///
-/// let a = 0.0;
-/// let b = 1e-7;
-///
-/// // The difference between `a` and `b` is less than `EPSILON`.
-/// // Therefore, the two values are considered equal.
-/// assert!((a - b).abs() < EPSILON);
-/// ```
-///
-/// # Remarks
-///
-/// - The value of `EPSILON` is set to `1e-6`.
-/// - The chosen value was arbitrary and can be adjusted as needed.
-const EPSILON: f32 = 1e-6;
-
 /// Computes the intersection points between a line segment and an infinite horizontal plane at a given height.
 ///
 /// # Remarks
@@ -43,8 +22,8 @@ fn slice_segment(line: &[Vec3; 2], current_layer_height: f32) -> Vec<Vec3> {
     let line_direction = line[1] - line[0];
     let mut intersections = Vec::new();
 
-    let is_parallel = approx_equal(line_direction.y, 0.0, EPSILON);
-    let same_height = approx_equal(current_layer_height, line[0].y, EPSILON);
+    let is_parallel = approx_equal(line_direction.y, 0.0, f32::EPSILON);
+    let same_height = approx_equal(current_layer_height, line[0].y, f32::EPSILON);
 
     if is_parallel && same_height {
         intersections.push(Vec3::new(line[0].x, current_layer_height, line[0].z));
@@ -100,8 +79,8 @@ fn slice_triangle(triangle: &[Vec3; 3], current_layer_height: f32) -> Vec<Vec3> 
         intersections.extend(segment_intersections);
     }
 
-    intersections.sort_by(|a, b| compare_by_xyz(a, b, EPSILON));
-    intersections.dedup_by(|a, b| a.abs_diff_eq(*b, EPSILON));
+    intersections.sort_by(|a, b| compare_by_xyz(a, b, f32::EPSILON));
+    intersections.dedup_by(|a, b| a.abs_diff_eq(*b, f32::EPSILON));
 
     intersections
 }
