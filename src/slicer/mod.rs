@@ -43,11 +43,13 @@ fn slice_segment(line: &[Vec3; 2], current_layer_height: f32) -> Vec<Vec3> {
     let line_direction = line[1] - line[0];
     let mut intersections = Vec::new();
 
-    if line_direction.y == 0.0 && line[0].y == current_layer_height {
-        // The line is parallel to the plane.
+    let is_parallel = approx_equal(line_direction.y, 0.0, EPSILON);
+    let same_height = approx_equal(current_layer_height, line[0].y, EPSILON);
+
+    if is_parallel && same_height {
         intersections.push(Vec3::new(line[0].x, current_layer_height, line[0].z));
         intersections.push(Vec3::new(line[1].x, current_layer_height, line[1].z));
-    } else if line_direction.y != 0.0 {
+    } else if !is_parallel {
         let t = (current_layer_height - line[0].y) / line_direction.y;
         if (0.0..=1.0).contains(&t) {
             let intersection = line[0] + line_direction * t;
@@ -82,6 +84,15 @@ fn slice_segment(line: &[Vec3; 2], current_layer_height: f32) -> Vec<Vec3> {
 fn slice_triangle(triangle: &[Vec3; 3], current_layer_height: f32) -> Vec<Vec3> {
     let mut intersections = Vec::new();
 
+    let min_y = triangle.iter().map(|v| v.y).fold(f32::INFINITY, f32::min);
+    let max_y = triangle
+        .iter()
+        .map(|v| v.y)
+        .fold(f32::NEG_INFINITY, f32::max);
+    if current_layer_height < min_y || current_layer_height > max_y {
+        return intersections;
+    }
+
     for curr_ind in 0..3 {
         let next_ind = (curr_ind + 1) % 3;
         let line = [triangle[curr_ind], triangle[next_ind]];
@@ -107,7 +118,11 @@ fn slice_triangle(triangle: &[Vec3; 3], current_layer_height: f32) -> Vec<Vec3> 
 ///
 /// A boolean value indicating whether the two numbers are approximately equal.
 fn approx_equal(a: f32, b: f32, max_abs_diff: f32) -> bool {
-    (a - b).abs() <= max_abs_diff
+    if (a - b).abs() <= max_abs_diff {
+        return true;
+    }
+
+    (a - b).abs() <= f32::EPSILON * f32::max(a.abs(), b.abs())
 }
 
 /// Compares two `Vec3` points by their x, y, and z coordinates with a given maximum absolute difference.
