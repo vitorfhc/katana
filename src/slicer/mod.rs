@@ -22,8 +22,8 @@ fn slice_segment(line: &[Vec3; 2], current_layer_height: f32) -> Vec<Vec3> {
     let line_direction = line[1] - line[0];
     let mut intersections = Vec::new();
 
-    let is_parallel = approx_equal(line_direction.y, 0.0, f32::EPSILON);
-    let same_height = approx_equal(current_layer_height, line[0].y, f32::EPSILON);
+    let is_parallel = line_direction.y.total_cmp(&0.0) == Ordering::Equal;
+    let same_height = current_layer_height.total_cmp(&line[0].y) == Ordering::Equal;
 
     if is_parallel && same_height {
         intersections.push(Vec3::new(line[0].x, current_layer_height, line[0].z));
@@ -79,29 +79,10 @@ fn slice_triangle(triangle: &[Vec3; 3], current_layer_height: f32) -> Vec<Vec3> 
         intersections.extend(segment_intersections);
     }
 
-    intersections.sort_by(|a, b| compare_by_xyz(a, b, f32::EPSILON));
+    intersections.sort_by(|a, b| compare_by_xyz(a, b));
     intersections.dedup_by(|a, b| a.abs_diff_eq(*b, f32::EPSILON));
 
     intersections
-}
-
-/// Compares two floating-point numbers for approximate equality with a given maximum absolute difference.
-/// The function returns `true` if the difference between the two numbers is less than or equal to the maximum absolute difference.
-///
-/// # Arguments
-///
-/// * `a` - The first floating-point number to compare.
-/// * `b` - The second floating-point number to compare.
-///
-/// # Returns
-///
-/// A boolean value indicating whether the two numbers are approximately equal.
-fn approx_equal(a: f32, b: f32, max_abs_diff: f32) -> bool {
-    if (a - b).abs() <= max_abs_diff {
-        return true;
-    }
-
-    (a - b).abs() <= f32::EPSILON * f32::max(a.abs(), b.abs())
 }
 
 /// Compares two `Vec3` points by their x, y, and z coordinates with a given maximum absolute difference.
@@ -115,15 +96,15 @@ fn approx_equal(a: f32, b: f32, max_abs_diff: f32) -> bool {
 /// # Returns
 ///
 /// An `Ordering` value indicating the relationship between the two points.
-fn compare_by_xyz(a: &Vec3, b: &Vec3, max_abs_diff: f32) -> Ordering {
-    if !approx_equal(a.x, b.x, max_abs_diff) {
-        a.x.partial_cmp(&b.x).unwrap()
-    } else if !approx_equal(a.y, b.y, max_abs_diff) {
-        a.y.partial_cmp(&b.y).unwrap()
-    } else if !approx_equal(a.z, b.z, max_abs_diff) {
-        a.z.partial_cmp(&b.z).unwrap()
+fn compare_by_xyz(a: &Vec3, b: &Vec3) -> Ordering {
+    if a.x.total_cmp(&b.x) != Ordering::Equal {
+        return a.x.total_cmp(&b.x);
+    } else if a.y.total_cmp(&b.y) != Ordering::Equal {
+        return a.y.total_cmp(&b.y);
+    } else if a.z.total_cmp(&b.z) != Ordering::Equal {
+        return a.z.total_cmp(&b.z);
     } else {
-        Ordering::Equal
+        return Ordering::Equal;
     }
 }
 
@@ -211,32 +192,26 @@ mod tests {
     fn test_compare_by_xyz() {
         let a = Vec3::new(0.0, 0.0, 0.0);
         let b = Vec3::new(0.0, 0.0, 0.0);
-        let max_abs_diff = 0.00001;
-        assert_eq!(compare_by_xyz(&a, &b, max_abs_diff), Ordering::Equal);
+        assert_eq!(compare_by_xyz(&a, &b), Ordering::Equal);
 
         let a = Vec3::new(0.0, 0.0, 0.0);
         let b = Vec3::new(0.0, 0.0, 0.0001);
-        let max_abs_diff = 0.0001;
-        assert_eq!(compare_by_xyz(&a, &b, max_abs_diff), Ordering::Equal);
+        assert_eq!(compare_by_xyz(&a, &b), Ordering::Less);
 
         let a = Vec3::new(0.0, 0.0, 0.0);
         let b = Vec3::new(0.0, 0.0, 0.0001);
-        let max_abs_diff = 0.00001;
-        assert_eq!(compare_by_xyz(&a, &b, max_abs_diff), Ordering::Less);
+        assert_eq!(compare_by_xyz(&a, &b), Ordering::Less);
 
         let a = Vec3::new(0.0, 0.0, 1.0);
         let b = Vec3::new(0.0, 0.0001, 1.0);
-        let max_abs_diff = 0.00001;
-        assert_eq!(compare_by_xyz(&a, &b, max_abs_diff), Ordering::Less);
+        assert_eq!(compare_by_xyz(&a, &b), Ordering::Less);
 
         let a = Vec3::new(0.0, 1.0, 0.0);
         let b = Vec3::new(0.0, 0.0, 0.0);
-        let max_abs_diff = 0.00001;
-        assert_eq!(compare_by_xyz(&a, &b, max_abs_diff), Ordering::Greater);
+        assert_eq!(compare_by_xyz(&a, &b), Ordering::Greater);
 
         let a = Vec3::new(1.0, 1.0, 1.0);
         let b = Vec3::new(0.0, 1.0, 1.0);
-        let max_abs_diff = 0.00001;
-        assert_eq!(compare_by_xyz(&a, &b, max_abs_diff), Ordering::Greater);
+        assert_eq!(compare_by_xyz(&a, &b), Ordering::Greater);
     }
 }
